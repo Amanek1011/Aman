@@ -4,3 +4,6 @@ asyncpg==0.30.0
 BeautifulSoup4==4.13.3
 deep-translator==1.11.4
 lxml==5.3.1
+selenium==4.30.0
+webdriver-manager==4.0.2
+setuptools-78.0.2

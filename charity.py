@@ -1,21 +1,59 @@
-import aiohttp
-from bs4 import BeautifulSoup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-async def get_charity():
-    url = 'https://2gis.kg/bishkek/search/%D0%91%D0%BB%D0%B0%D0%B3%D0%BE%D1%82%D0%B2%D0%BE%D1%80%D0%B8%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5%20%D1%84%D0%BE%D0%BD%D0%B4%D1%8B?m=74.6161%2C42.872342%2F11.76'
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    html = await response.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    sections = soup.find_all('div', class_="_awwm2v")
-                    for i in sections:
-                        name = i.find('a',class_='_1rehek')
-                        view = i.find('span',class_='_oqoid')
-                        return name , view
+charity_data = [
+    {"name": "Международный комитет Красного Креста",
+     "description": 'Наша работа по защите людей, пострадавших от конфликта', "address": "Улица Панфилова, 144",
+     "website": "https://www.icrc.org/en"},
+    {"name": "Алтын уя", "description": "Максатыбыз, тилегибиз, аракетибиз – ОКУБАГАН БАЛА КАЛБАСЫН!",
+     "address": "Улица Мичурина, 80",
+     "website": "http://altynuya.org/"},
+    {"name": "Элим Барсынбы?",
+     "description": "Основная миссия фонда оказание помощи всем нуждающим людям проживающим в Кыргызской Республике.",
+     "address": "Улица Исакеева, 18/3",
+     "website": "https://www.instagram.com/elimbarsynby_official/"},
+    {"name": "Фонтан жизни",
+     "description": "Мы — местная благотворительная организация, целью которой является предоставление комплексной помощи (физической, эмоциональной, духовной) бездомным в Бишкеке, Кыргызстан",
+     "address": "Улица Васильева, 163",
+     "website": "https://www.fountainoflife.kg/"},
+    {"name": "SOS",
+     "description": "SOS Детские Деревни – негосударственная социальная организация, на протяжении 60 лет защищающая права и интересы детей.",
+     "address": "Улица Минина, 47",
+     "website": "https://www.soskyrgyzstan.kg/"},
+    {"name": "Taiwan Fund for Children and Families",
+     "description": "ОБФ «Тайваньский Благотворительный Фонд» Мы заботимся о будущем детей уже сегодня",
+     "address": "Улица Юдахина, 65/1",
+     "website": "https://www.instagram.com/tfcfkyrgyzstan/"},
+    {"name": "Коломто", "description": "Приют для бездомных людей", "address": "Проспект Жибек-Жолу, 413",
+     "website": "Нету страницы"},
+    {"name": "World share",
+     "description": "Международная неправительственная организация по оказанию помощи и развитию.",
+     "address": "Улица Ибраимова, 115/4",
+     "website": "http://worldshare.kg/"},
+    {"name": "Help the Children-SKD",
+     "description": "«Help the Children – SKD» оказывает помощь детям, страдающим онкологическими, гематологическими и иммунологическими заболеваниями и их семьям.",
+     "address": "4-й микрорайон, 26/1",
+     "website": "https://www.deti.kg/"},
+    {"name": "Бабушка Эдопшн",
+     "description": "Фонд оказывающий финансовую поддержку одиноким пожилым людям, живущим в крайней нищете.",
+     "address": "Московская улица, 39",
+     "website": "https://babushkaadoption.org/ru/%d0%b3%d0%bb%d0%b0%d0%b2%d0%bd%d0%b0%d1%8f/"}
+]
 
-    except Exception as e:
-        print(f"Error during request or parsing: {e}")
-        return "Произошла ошибка при запросе данных."
+async def get_charity(index: int):
+    if index < len(charity_data):
+        charity = charity_data[index]
+        charity_info = (f"🏠 Название: {charity['name']}\n"
+                        f"📌 Описание: {charity['description']}\n"
+                        f"📍 Адрес: {charity['address']}\n"
+                        f"🌐 Сайт: {charity['website']}")
+
+        buttons = []
+        if index + 1 < len(charity_data):
+            buttons.append([InlineKeyboardButton(text="Еще", callback_data=f"next:{index + 1}")])
+
+        markup = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
+
+        return charity_info, markup
+    return None, None
+
 
