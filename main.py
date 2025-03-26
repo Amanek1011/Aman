@@ -11,7 +11,6 @@ from charity import get_charity
 from news import get_news_today, get_data_today, get_news_yesterday, get_data_yesterday, send_long_message
 
 load_dotenv()
-
 TOKEN = os.getenv("TOKEN")
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -28,14 +27,14 @@ async def text_handler(message: types.Message):
         await message.answer('За какое время вам показывать новости?',reply_markup=kb.inline_news)
     elif message.text == '🌎 Благотворительные фонды':
         charity_info, markup = await get_charity(0)
-
         if charity_info is None:
             await message.answer("Ошибка: Не удалось загрузить данные фонда. Попробуйте позже.")
             return
-
-        # Отправляем информацию о первом фонде
         await message.answer(charity_info, reply_markup=markup)
+    elif message.text == '📚 Подготовка к ОРТ':
+        pass
 
+# 🌎 Благотворительные фонды
 @dp.callback_query(lambda c: c.data.startswith("next:"))
 async def process_next_fund(callback_query: types.CallbackQuery):
     index = int(callback_query.data.split(":")[1])  # Получаем индекс следующего фонда
@@ -50,6 +49,8 @@ async def process_next_fund(callback_query: types.CallbackQuery):
     await callback_query.answer()
 
 
+
+# 📰 Новости
 @dp.callback_query()
 async def callback_query_handler(call: types.CallbackQuery):
     if call.data == "today":
