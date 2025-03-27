@@ -1,13 +1,14 @@
 import asyncio
 import os
 
-
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from dotenv import load_dotenv
 
 import keyboards as kb
 from charity import get_charity
+from helping_animals import start_shelter
 from news import get_news_today, get_data_today, get_news_yesterday, get_data_yesterday, send_long_message
 
 load_dotenv()
@@ -15,6 +16,27 @@ TOKEN = os.getenv("TOKEN")
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+questions = [
+    {"text": "Вы готовы заботиться о питомце всю его жизнь?", "buttons": ["Да", "Нет"]},
+    {"text": "Готовы ли вы посещать ветеринара в случае необходимости?", "buttons": ["Да", "Нет"]},
+    {"text": "Вы можете обеспечить питомцу комфортные условия жизни?", "buttons": ["Да", "Нет"]},
+]
+
+pets = [
+    {"id": 1, "name": "Барсик", "photo": "https://melitopol-news.ru/img/20240305/a9073bcadfb86dc6a12733530c3f2333_o.jpg", "desc": "добрый котик", "age": 2},
+    {"id": 2, "name": "Принцесса", "photo": "https://i.pinimg.com/736x/22/c1/79/22c17996e3e7f4479d0b9960b4e0cbd0.jpg", "desc": "Любит гулять", "age": 3},
+    {"id": 3, "name": "Саша", "photo": "https://i.pinimg.com/736x/59/7a/cf/597acf74dac3b7258bd8a0209efd925f.jpg", "desc": "Саша свинтус", "age": 1},
+    {"id": 4, "name": "Люсинка", "photo": "https://pic.rutubelist.ru/user/55/99/55996e286a9c7916e02caca2b1a93394.jpg", "desc": "Красавица и умница", "age": 4},
+    {"id": 5, "name": "Томми", "photo": "https://i.pinimg.com/originals/ea/21/b6/ea21b6d98f790d40beb06350a6f6904d.jpg", "desc": "Верный друг", "age": 5},
+    {"id": 6, "name": "Луна", "photo": "https://i.pinimg.com/originals/59/a4/06/59a406200e3a54ed084a2a6268e28e18.jpg", "desc": "Очаровательная кошечка", "age": 3},
+    {"id": 7, "name": "Мурка", "photo": "https://habrastorage.org/r/w780/getpro/habr/upload_files/779/147/c1f/779147c1fef39f67a04d66eba21b32ff.jpeg", "desc": "Хитрая кошка", "age": 2},
+    {"id": 8, "name": "Джек", "photo": "https://avatars.mds.yandex.net/i?id=0dfdcdcf7c863f9cf16e70bf03bdb1cd_l-5370628-images-thumbs&n=13", "desc": "Активный и умный", "age": 1},
+    {"id": 9, "name": "Король", "photo": "https://i.pinimg.com/736x/f4/de/2e/f4de2e6f9f2c167d55eded71594b4157.jpg", "desc": "Он для тебя царь и бог", "age": 4},
+    {"id": 10, "name": "Боня", "photo": "https://avatars.mds.yandex.net/i?id=cac63cf1a4422abd38a805d5a24a851c_l-9226797-images-thumbs&n=13", "desc": "Любит поесть", "age": 3},
+]
+user_answers = {}
+donations = {}
+user_pets_index = {}
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
@@ -35,7 +57,6 @@ async def text_handler(message: types.Message):
         pass
     elif message.text == "🦮 Питомник":
         pass
-
 
 # 🌎 Благотворительные фонды
 @dp.callback_query(lambda c: c.data.startswith("next:"))
