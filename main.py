@@ -33,6 +33,9 @@ async def text_handler(message: types.Message):
         await message.answer(charity_info, reply_markup=markup)
     elif message.text == '📚 Подготовка к ОРТ':
         pass
+    elif message.text == "🦮 Питомник":
+        pass
+
 
 # 🌎 Благотворительные фонды
 @dp.callback_query(lambda c: c.data.startswith("next:"))

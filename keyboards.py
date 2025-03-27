@@ -8,7 +8,8 @@ reply_menu = types.ReplyKeyboardMarkup(
                 types.KeyboardButton(text='🌎 Благотворительные фонды'),
             ],
             [
-                types.KeyboardButton(text='📚 Подготовка к ОРТ')
+                types.KeyboardButton(text='📚 Подготовка к ОРТ'),
+                types.KeyboardButton(text='🦮 Питомник'),
             ]
         ],
         resize_keyboard=True,
