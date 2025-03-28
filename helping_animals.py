@@ -1,18 +1,10 @@
-import os
-import logging
-from aiogram import Bot, Dispatcher, types
+
+
+from aiogram import  types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, \
     InputMediaPhoto
-from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from dotenv import load_dotenv
 
-
-# Загружаем токен для бота из файла .env
-load_dotenv()
-TOKEN = os.getenv("TOKEN")  # Читаем токен из файла .env
-bot = Bot(token=TOKEN)  # Создаем объект бота
-dp = Dispatcher()  # Создаем диспетчера для работы с ботом
 
 # Вопросы анкеты
 questions = [
@@ -42,11 +34,11 @@ pets = [
 # Фиксированный номер телефона питомника
 shelter_phone = "+88005553535"
 
-logging.basicConfig(level=logging.INFO)  # Настроим логирование для отладки
+
 
 # Когда пользователь пишет команду /start, бот выводит кнопки для выбора
-@dp.message(Command("start"))
-async def start(message: types.Message):
+
+async def start_animals(message: types.Message):
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Забрать питомца")],
@@ -54,10 +46,9 @@ async def start(message: types.Message):
         ],
         resize_keyboard=True
     )
-    await message.answer("Привет! Я бот помощи животным. Ты хочешь забрать питомца или сделать пожертвование?", reply_markup=keyboard)
+    await message.answer("Привет! Я помощник по животны животным. Ты хочешь забрать питомца или сделать пожертвование?", reply_markup=keyboard)
 
 # Когда пользователь нажимает кнопку "Забрать питомца", начинается анкета
-@dp.message(lambda msg: msg.text == "Забрать питомца")
 async def start_survey(message: types.Message):
     user_answers[message.from_user.id] = []
     await ask_question(message.from_user.id, message)
@@ -76,15 +67,8 @@ async def ask_question(user_id, message):
     else:
         await analyze_answers(user_id, message)
 
-# Когда пользователь нажимает на кнопку с ответом
-@dp.callback_query(lambda c: c.data.startswith("answer_"))
-async def handle_answer(callback: types.CallbackQuery):
-    _, q_index, answer = callback.data.split("_", 2)
-    user_id = callback.from_user.id
-    user_answers[user_id].append(answer)
 
-    await callback.answer()
-    await ask_question(user_id, callback.message)
+
 
 # Функция для анализа ответов пользователя
 async def analyze_answers(user_id, message):
@@ -101,8 +85,7 @@ async def analyze_answers(user_id, message):
 # Словарь для хранения текущего питомца для каждого пользователя
 user_pets_index = {}
 
-# Функция для показа питомца
-# Функция для показа питомца
+
 async def show_pet(user_id, message, pet_index=0):
     # Если пользователь еще не просматривал питомцев, устанавливаем индекс в 0
     if user_id not in user_pets_index or pet_index == 0:
@@ -115,7 +98,7 @@ async def show_pet(user_id, message, pet_index=0):
 
     await message.answer_media_group([media])
 
-    # Клавиатура для навигации по питомцам
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Назад", callback_data=f"back_{pet_index}")] if pet_index > 0 else [],
         [InlineKeyboardButton(text="Следующий", callback_data=f"skip_{pet_index}")] if pet_index < len(pets) - 1 else [],
@@ -124,13 +107,27 @@ async def show_pet(user_id, message, pet_index=0):
 
     await message.answer(f"Вы смотрите на питомца {pet['name']}. Что вы хотите сделать?", reply_markup=keyboard)
 
+# Обработчики
+async def handle_answer(callback: types.CallbackQuery):
+    print(f"Получен callback: {callback.data}")  # Проверяем, что приходит от кнопок
 
-# Когда пользователь нажимает на кнопку "Выбрать", питомец выбирается
-@dp.callback_query(lambda c: c.data.startswith("adopt_"))
+    try:
+        _, q_index, answer = callback.data.split("_", 2)
+        q_index = int(q_index)  # Преобразуем в число
+    except ValueError:
+        await callback.answer("Ошибка обработки ответа")
+        return
+
+    user_id = callback.from_user.id
+    user_answers[user_id].append(answer)
+
+    await callback.answer()  # Закрываем callback (иначе Telegram выдаст ошибку)
+    await ask_question(user_id, callback.message)  # Переходим к следующему вопросу
+
+
 async def adopt_pet(callback: types.CallbackQuery):
     pet_id = int(callback.data.split("_")[1])
     pet = next((p for p in pets if p["id"] == pet_id), None)
-
     if pet:
         await callback.message.answer(f"Поздравляем! Вы выбрали {pet['name']}. Приют скоро с вами свяжется!")
         await callback.message.answer(f"Для связи с приютом звоните по номеру: {shelter_phone}")
@@ -139,7 +136,6 @@ async def adopt_pet(callback: types.CallbackQuery):
     await callback.answer()
 
 
-@dp.callback_query(lambda c: c.data.startswith("skip_"))
 async def next_pet(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     current_index = int(callback.data.split("_")[1])
@@ -153,8 +149,6 @@ async def next_pet(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# Когда пользователь нажимает кнопку "Назад", бот показывает предыдущего питомца
-@dp.callback_query(lambda c: c.data.startswith("back_"))
 async def previous_pet(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     current_index = int(callback.data.split("_")[1])
@@ -167,31 +161,8 @@ async def previous_pet(callback: types.CallbackQuery):
 
     await callback.answer()
 
-# Функции для пожертвования
-@dp.message(lambda msg: msg.text == "Пожертвовать")
-async def donate_start(message: types.Message):
-    await message.answer("Введите сумму, которую хотите пожертвовать (в сомах):")
 
-@dp.message(lambda msg: msg.text.isdigit())
-async def donate_process(message: types.Message):
-    amount = int(message.text)
 
-    if amount < 10:
-        await message.answer("Минимальная сумма пожертвования — 10 сом. Попробуйте снова.")
-        return
 
-    donations[message.from_user.id] = amount
-    await message.answer(f"Спасибо за ваше пожертвование в размере {amount} сом! ❤️")
-    await message.answer(f"Для связи с приютом звоните по номеру: {shelter_phone}")
 
-# Запуск бота
-if __name__ == "__main__":
-    print("Starting")
-    import asyncio
-
-    async def main():
-        logging.basicConfig(level=logging.INFO)
-        await dp.start_polling(bot)
-
-    asyncio.run(main())
 

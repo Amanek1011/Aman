@@ -1,69 +1,116 @@
 import asyncio
 import os
 
-from aiogram import Bot, Dispatcher, types
+
+from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from dotenv import load_dotenv
 
 import keyboards as kb
+from database import db
 from charity import get_charity
-from helping_animals import start_shelter
-from news import get_news_today, get_data_today, get_news_yesterday, get_data_yesterday, send_long_message
+from helping_animals import *
+from news import get_news_today, get_data_today, get_news_yesterday, get_data_yesterday, send_long_message, \
+    news_handler, weather_handler, back_to_main, currency_handler
+from ORT_ai import ort_router, on_startup, example_handler, change_subject, exit_handler
+from bot_jurist import jurist_router, start_jurist, show_lawyers, how_to_apply, basic_rights, \
+    exit_jurist  # Импортируем новый роутер
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-questions = [
-    {"text": "Вы готовы заботиться о питомце всю его жизнь?", "buttons": ["Да", "Нет"]},
-    {"text": "Готовы ли вы посещать ветеринара в случае необходимости?", "buttons": ["Да", "Нет"]},
-    {"text": "Вы можете обеспечить питомцу комфортные условия жизни?", "buttons": ["Да", "Нет"]},
-]
+# Подключаем все роутеры
+dp.include_router(ort_router)
+dp.include_router(jurist_router)
 
-pets = [
-    {"id": 1, "name": "Барсик", "photo": "https://melitopol-news.ru/img/20240305/a9073bcadfb86dc6a12733530c3f2333_o.jpg", "desc": "добрый котик", "age": 2},
-    {"id": 2, "name": "Принцесса", "photo": "https://i.pinimg.com/736x/22/c1/79/22c17996e3e7f4479d0b9960b4e0cbd0.jpg", "desc": "Любит гулять", "age": 3},
-    {"id": 3, "name": "Саша", "photo": "https://i.pinimg.com/736x/59/7a/cf/597acf74dac3b7258bd8a0209efd925f.jpg", "desc": "Саша свинтус", "age": 1},
-    {"id": 4, "name": "Люсинка", "photo": "https://pic.rutubelist.ru/user/55/99/55996e286a9c7916e02caca2b1a93394.jpg", "desc": "Красавица и умница", "age": 4},
-    {"id": 5, "name": "Томми", "photo": "https://i.pinimg.com/originals/ea/21/b6/ea21b6d98f790d40beb06350a6f6904d.jpg", "desc": "Верный друг", "age": 5},
-    {"id": 6, "name": "Луна", "photo": "https://i.pinimg.com/originals/59/a4/06/59a406200e3a54ed084a2a6268e28e18.jpg", "desc": "Очаровательная кошечка", "age": 3},
-    {"id": 7, "name": "Мурка", "photo": "https://habrastorage.org/r/w780/getpro/habr/upload_files/779/147/c1f/779147c1fef39f67a04d66eba21b32ff.jpeg", "desc": "Хитрая кошка", "age": 2},
-    {"id": 8, "name": "Джек", "photo": "https://avatars.mds.yandex.net/i?id=0dfdcdcf7c863f9cf16e70bf03bdb1cd_l-5370628-images-thumbs&n=13", "desc": "Активный и умный", "age": 1},
-    {"id": 9, "name": "Король", "photo": "https://i.pinimg.com/736x/f4/de/2e/f4de2e6f9f2c167d55eded71594b4157.jpg", "desc": "Он для тебя царь и бог", "age": 4},
-    {"id": 10, "name": "Боня", "photo": "https://avatars.mds.yandex.net/i?id=cac63cf1a4422abd38a805d5a24a851c_l-9226797-images-thumbs&n=13", "desc": "Любит поесть", "age": 3},
-]
-user_answers = {}
+# Инициализация переменных
+user_states = {}
 donations = {}
-user_pets_index = {}
+shelter_phone = "+996 555 123456"
+
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
-    await message.answer(f"Привет {message.from_user.first_name or message.from_user.username}, выберите из меню",
-                         reply_markup=kb.reply_menu)
+    # Добавляем пользователя в базу данных
+    await db.add_user(
+        user_id=message.from_user.id,
+        username=message.from_user.username,
+        first_name=message.from_user.first_name,
+        last_name=message.from_user.last_name
+    )
+
+    await message.answer(
+        f"Привет {message.from_user.first_name or message.from_user.username}, выберите из меню",
+        reply_markup=kb.reply_menu
+    )
 
 @dp.message()
 async def text_handler(message: types.Message):
-    if message.text == "📰 Новости":
-        await message.answer('За какое время вам показывать новости?',reply_markup=kb.inline_news)
+    user_id = message.from_user.id
+
+    # Обработка пожертвований
+    if user_id in user_states and user_states[user_id] == 'waiting_for_donation':
+        try:
+            amount = int(message.text)
+            if amount < 10:
+                await message.answer("Минимальная сумма пожертвования — 10 сом. Попробуйте снова.")
+                return
+
+            donations[user_id] = amount
+            await message.answer(f"Спасибо за ваше пожертвование в размере {amount} сом! ❤️")
+            await message.answer(f"Для связи с приютом звоните по номеру: {shelter_phone}")
+            del user_states[user_id]
+        except ValueError:
+            await message.answer("Пожалуйста, введите корректную сумму (только цифры).")
+        return
+
+    # Основное меню
+    if message.text == "📰 Сервисы":
+        await message.answer('Выберите сервис', reply_markup=kb.reply_service)
+    elif message.text == '📰 Новости':
+        await news_handler(message)
+    elif message.text == '🌤 Погода':
+        await weather_handler(message)
+    elif message.text == '💱 Курс валют':
+        await currency_handler(message)
+    elif message.text == '↩️ Назад':
+        await back_to_main(message)
     elif message.text == '🌎 Благотворительные фонды':
         charity_info, markup = await get_charity(0)
         if charity_info is None:
             await message.answer("Ошибка: Не удалось загрузить данные фонда. Попробуйте позже.")
             return
         await message.answer(charity_info, reply_markup=markup)
-    elif message.text == '📚 Подготовка к ОРТ':
-        pass
     elif message.text == "🦮 Питомник":
-        pass
+        await start_animals(message)
+    elif message.text == 'Забрать питомца':
+        await start_survey(message)
+    elif message.text == 'Пожертвовать':
+        await donate_start(message)
+    elif message.text == "Пример вопроса":
+        await example_handler(message)
+    elif message.text == 'Сменить предмет':
+        await change_subject(message)
+    elif message.text == 'Выход':
+        await exit_handler(message)
+    elif message.text == '💼 Юридический помощник':
+        await start_jurist(message)
+    elif message.text == 'Бесплатные юристы':
+        await show_lawyers(message)
+    elif message.text == 'Как подать заявление?':
+        await how_to_apply(message)
+    elif message.text == 'Мои права':
+        await basic_rights(message)
+    elif message.text == '↩️ Выйти в меню':
+        await exit_jurist(message)
+    # Юридический помощник теперь обрабатывается через jurist_router
 
-# 🌎 Благотворительные фонды
 @dp.callback_query(lambda c: c.data.startswith("next:"))
 async def process_next_fund(callback_query: types.CallbackQuery):
-    index = int(callback_query.data.split(":")[1])  # Получаем индекс следующего фонда
-
-    charity_info, markup = await get_charity(index)  # Получаем данные следующего фонда
+    index = int(callback_query.data.split(":")[1])
+    charity_info, markup = await get_charity(index)
 
     if charity_info is None:
         await callback_query.answer("Больше фондов нет.")
@@ -72,11 +119,8 @@ async def process_next_fund(callback_query: types.CallbackQuery):
     await callback_query.message.answer(charity_info, reply_markup=markup)
     await callback_query.answer()
 
-
-
-# 📰 Новости
-@dp.callback_query()
-async def callback_query_handler(call: types.CallbackQuery):
+@dp.callback_query(lambda c: c.data in ["today", "yesterday"])
+async def news_callback_handler(call: types.CallbackQuery):
     if call.data == "today":
         news = await get_news_today()
         data = await get_data_today()
@@ -93,13 +137,35 @@ async def callback_query_handler(call: types.CallbackQuery):
             await send_long_message(call.message, news)
         else:
             await send_long_message(call.message, "Не удалось загрузить новости. Попробуйте позже.")
+    await call.answer()
 
+@dp.callback_query(lambda c: c.data.startswith(('answer_', 'adopt_', 'skip_', 'back_')))
+async def animals_callback_handler(call: types.CallbackQuery):
+    if call.data.startswith('answer_'):
+        await handle_answer(call)
+    elif call.data.startswith('adopt_'):
+        await adopt_pet(call)
+    elif call.data.startswith('skip_'):
+        await next_pet(call)
+    elif call.data.startswith('back_'):
+        await previous_pet(call)
+
+
+
+async def donate_start(message: types.Message):
+    user_id = message.from_user.id
+    user_states[user_id] = 'waiting_for_donation'
+    await message.answer("Введите сумму, которую хотите пожертвовать (в сомах):")
 
 
 async def main():
+    # Инициализация базы данных
+    await db.connect()
+    await db.create_tables()
+
+    await on_startup()
     print("Bot started...")
     await dp.start_polling(bot)
-
 
 if __name__ == '__main__':
     asyncio.run(main())

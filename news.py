@@ -1,7 +1,87 @@
-import aiohttp
-from bs4 import BeautifulSoup
+import os
 from datetime import datetime, timedelta
 
+from aiogram import Router, types
+
+import aiohttp
+import xml.etree.ElementTree as ET
+
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+import keyboards as kb
+load_dotenv()
+WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
+
+services_router = Router(name="services_router")
+
+
+async def news_handler(message: types.Message):
+    await message.answer('За какое время вам показывать новости?', reply_markup=kb.inline_news)
+
+
+
+async def weather_handler(message: types.Message):
+    weather = await get_weather()
+    await message.answer(weather)
+
+
+
+async def currency_handler(message: types.Message):
+    rates = await get_currency_rates()
+    await message.answer(rates)
+
+
+
+async def back_to_main(message: types.Message):
+    await message.answer(
+        "Возвращаемся в главное меню",
+        reply_markup=kb.reply_menu
+    )
+
+
+async def get_currency_rates():
+    url = "https://www.nbkr.kg/XML/daily.xml"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                xml_data = await response.text()
+                root = ET.fromstring(xml_data)
+                rates = {}
+                for currency in root.findall('Currency'):
+                    iso_code = currency.get('ISOCode')
+                    value_element = currency.find('Value')
+                    if iso_code and value_element is not None:
+                        rates[iso_code] = value_element.text
+
+                return (
+                    "💰 <b>Официальные курсы валют:</b>\n\n"
+                    f"🇺🇸 USD: {rates.get('USD', 'N/A')} KGS\n"
+                    f"🇪🇺 EUR: {rates.get('EUR', 'N/A')} KGS\n"
+                    f"🇷🇺 RUB: {rates.get('RUB', 'N/A')} KGS\n"
+                    f"🇰🇿 KZT: {rates.get('KZT', 'N/A')} KGS\n"
+                    f"🇨🇳 CNY: {rates.get('CNY', 'N/A')} KGS"
+                )
+            return "⚠️ Не удалось получить курсы валют"
+
+
+async def get_weather():
+    url = f"https://api.openweathermap.org/data/2.5/weather?q=Бишкек&appid={WEATHER_API_KEY}&units=metric&lang=ru"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                data = await response.json()
+                weather = data["weather"][0]["description"].capitalize()
+                temp = data["main"]["temp"]
+                feels = data["main"]["feels_like"]
+                humidity = data["main"]["humidity"]
+                return (
+                    f"🌤 <b>Погода в Бишкеке:</b>\n\n"
+                    f"• Состояние: {weather}\n"
+                    f"• Температура: {temp}°C\n"
+                    f"• Ощущается как: {feels}°C\n"
+                    f"• Влажность: {humidity}%"
+                )
+            return "⚠️ Не удалось получить данные о погоде"
 
 async def get_news_today():
     current_data = datetime.now().strftime("%Y-%m-%d")
