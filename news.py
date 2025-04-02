@@ -54,7 +54,7 @@ async def get_currency_rates():
                         rates[iso_code] = value_element.text
 
                 return (
-                    "💰 <b>Официальные курсы валют:</b>\n\n"
+                    "💰 Официальные курсы валют: \n\n"
                     f"🇺🇸 USD: {rates.get('USD', 'N/A')} KGS\n"
                     f"🇪🇺 EUR: {rates.get('EUR', 'N/A')} KGS\n"
                     f"🇷🇺 RUB: {rates.get('RUB', 'N/A')} KGS\n"
@@ -75,7 +75,7 @@ async def get_weather():
                 feels = data["main"]["feels_like"]
                 humidity = data["main"]["humidity"]
                 return (
-                    f"🌤 <b>Погода в Бишкеке:</b>\n\n"
+                    f"🌤 Погода в Бишкеке: \n\n"
                     f"• Состояние: {weather}\n"
                     f"• Температура: {temp}°C\n"
                     f"• Ощущается как: {feels}°C\n"

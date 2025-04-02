@@ -105,6 +105,8 @@ async def text_handler(message: types.Message):
         await basic_rights(message)
     elif message.text == '↩️ Выйти в меню':
         await exit_jurist(message)
+    elif message.text == '↩ Выйти в меню':
+        await message.answer('Вы вышли в меню ', reply_markup=kb.reply_menu)
     # Юридический помощник теперь обрабатывается через jurist_router
 
 @dp.callback_query(lambda c: c.data.startswith("next:"))

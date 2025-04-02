@@ -43,6 +43,7 @@ async def start_animals(message: types.Message):
         keyboard=[
             [KeyboardButton(text="Забрать питомца")],
             [KeyboardButton(text="Пожертвовать")],
+            [KeyboardButton(text='↩ Выйти в меню')]
         ],
         resize_keyboard=True
     )
